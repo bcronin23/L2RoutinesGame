@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Independent Living — Level 2 Drag & Drop (Daily Routine+)</title>
+<style>
+  :root{
+    --gap:16px; --pad:16px; --radius:18px;
+    --ink:#0f172a; --muted:#475569; --bg:#f7f8fc; --panel:#ffffff;
+    --brand:#2563eb; --ok:#16a34a; --warn:#eab308; --bad:#dc2626;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{position:sticky; top:0; z-index:10; background:linear-gradient(90deg,#e0e7ff,#e9d5ff); border-bottom:1px solid #e5e7eb; padding:10px 14px}
+  h1{margin:0; font-size:clamp(18px,2.5vw,28px);}
+  .wrap{max-width:1100px;margin:0 auto;padding:var(--pad)}
+  .card, .drop{border:2px dashed #cbd5e1; border-radius:16px; background:var(--panel); box-shadow:0 6px 20px rgba(15,23,42,.06)}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+  button{border:0;border-radius:14px;padding:10px 14px;font-weight:600;cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,.06);}
+  .primary{background:var(--brand);color:#fff}
+  .ghost{background:#eef2ff}
+  .good{background:var(--ok); color:#fff}
+  .bad{background:#fee2e2}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:#eef2ff;border-radius:999px;padding:6px 10px;font-size:14px}
+  .grid{display:grid; gap:var(--gap)}
+  .grid-3{grid-template-columns:repeat(3,1fr)}
+  .grid-2{grid-template-columns:repeat(2,1fr)}
+  .bank{padding:12px}
+  .items{display:flex;flex-wrap:wrap;gap:10px;min-height:64px}
+  .item{user-select:none; touch-action:none; padding:10px 12px; border:2px solid #dbeafe; border-radius:14px; background:#fff; font-size:18px; display:inline-flex; align-items:center; gap:10px; box-shadow:0 3px 10px rgba(37,99,235,.12)}
+  .item[draggable="true"]{cursor:grab}
+  .item:active{cursor:grabbing}
+  .drop{padding:14px;min-height:140px;position:relative}
+  .drop h3{margin-top:0;margin-bottom:10px;font-size:18px}
+  .hint{font-size:14px;color:var(--muted)}
+  .zone{min-height:86px; display:flex; flex-wrap:wrap; gap:10px}
+  .sequence{min-height:86px; display:flex; flex-wrap:nowrap; gap:10px; overflow-x:auto}
+  .slot{min-width:120px; min-height:56px; border:2px dashed #e2e8f0; border-radius:12px; display:flex; align-items:center; justify-content:center; padding:6px 8px}
+  .slot .item{font-size:16px}
+  .badge{font-size:12px; background:#f1f5f9; border-radius:999px; padding:6px 8px; display:inline-block}
+  .stage{display:none}
+  .stage.active{display:block}
+  .now-next-then{display:flex; gap:10px; margin:8px 0 14px 0; flex-wrap:wrap}
+  .nnt{flex:1; min-width:180px; background:var(--panel); border:1px solid #e5e7eb; border-radius:12px; padding:10px}
+  .nnt b{display:block; margin-bottom:6px}
+  .status{margin:8px 0; padding:10px 12px; border-radius:12px; display:none}
+  .status.show{display:block}
+  .progress{height:10px; background:#e5e7eb; border-radius:999px; overflow:hidden}
+  .bar{height:100%; width:0; background:linear-gradient(90deg,#22c55e,#16a34a)}
+  .small{font-size:13px;color:var(--muted)}
+  .footer{margin-top:18px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap}
+  .drop.highlight{outline:3px solid #fde68a}
+  .clock{font-variant-numeric:tabular-nums; font-weight:700}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Daily Routine — Level 2 Drag & Drop</h1>
+    <div class="small">More challenge: order with distractors, match times, build a plan with rules. Tap-to-place toggle for iPad included.</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <nav class="toolbar">
+    <button class="primary" data-goto="stage1">1) Morning Order</button>
+    <button class="primary" data-goto="stage2">2) Time Match</button>
+    <button class="primary" data-goto="stage3">3) Plan with Rules</button>
+    <button class="ghost" id="toggleSelect">Tap-to-Place: <span id="modeLabel">Auto</span></button>
+  </nav>
+
+  <!-- Stage 1 -->
+  <section id="stage1" class="stage active">
+    <div class="now-next-then">
+      <div class="nnt"><b>Now</b> Place the <u>6 morning steps</u> in order. Leave any distractors in the bank.</div>
+      <div class="nnt"><b>Next</b> Press “Check Order”.</div>
+      <div class="nnt"><b>Then</b> Go to “Time Match”.</div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="bank card">
+        <div class="pill">🧺 Card Bank</div>
+        <div class="items" id="bank1"></div>
+      </div>
+      <div class="drop" data-accept="sequence" aria-label="Sequence strip">
+        <h3>🌅 Morning sequence <span class="badge">6 steps</span></h3>
+        <div class="sequence" id="sequence1">
+          <div class="slot" aria-label="Step 1"></div>
+          <div class="slot" aria-label="Step 2"></div>
+          <div class="slot" aria-label="Step 3"></div>
+          <div class="slot" aria-label="Step 4"></div>
+          <div class="slot" aria-label="Step 5"></div>
+          <div class="slot" aria-label="Step 6"></div>
+        </div>
+        <div class="hint">Tip: drag or tap a card, then tap a slot.</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="progress" style="flex:1; min-width:220px"><div class="bar" id="bar1"></div></div>
+      <div>
+        <button class="ghost" id="reset1">Reset Stage</button>
+        <button class="good" id="check1">Check Order</button>
+      </div>
+    </div>
+    <div class="status bad" id="status1" role="status"></div>
+  </section>
+
+  <!-- Stage 2 -->
+  <section id="stage2" class="stage">
+    <div class="now-next-then">
+      <div class="nnt"><b>Now</b> Match each activity to the best time on the clocks.</div>
+      <div class="nnt"><b>Next</b> “Check Matches”.</div>
+      <div class="nnt"><b>Then</b> Build a plan with rules.</div>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="bank card">
+        <div class="pill">🧺 Card Bank</div>
+        <div class="items" id="bank2"></div>
+      </div>
+      <div class="drop" data-accept="time" aria-label="Clock drop zones">
+        <h3>🕒 Match the time</h3>
+        <div class="zone" id="times">
+          <div class="slot" data-id="07:30"><span class="clock">07:30</span></div>
+          <div class="slot" data-id="08:30"><span class="clock">08:30</span></div>
+          <div class="slot" data-id="12:30"><span class="clock">12:30</span></div>
+          <div class="slot" data-id="16:00"><span class="clock">16:00</span></div>
+          <div class="slot" data-id="18:30"><span class="clock">18:30</span></div>
+          <div class="slot" data-id="21:00"><span class="clock">21:00</span></div>
+        </div>
+        <div class="hint">Example: 12:30 → Lunch</div>
+      </div>
+      <div class="card" style="padding:14px">
+        <div class="pill">✅ Items to place</div>
+        <ul>
+          <li>Breakfast</li>
+          <li>Brush teeth (morning)</li>
+          <li>Lunch</li>
+          <li>Homework / Learning</li>
+          <li>Dinner</li>
+          <li>Shower</li>
+        </ul>
+        <div class="small">There can be more than one acceptable time in real life — here use the best match.</div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="progress" style="flex:1; min-width:220px"><div class="bar" id="bar2"></div></div>
+      <div>
+        <button class="ghost" id="reset2">Reset Stage</button>
+        <button class="good" id="check2">Check Matches</button>
+      </div>
+    </div>
+    <div class="status bad" id="status2" role="status"></div>
+  </section>
+
+  <!-- Stage 3 -->
+  <section id="stage3" class="stage">
+    <div class="now-next-then">
+      <div class="nnt"><b>Now</b> Build your day: put <u>2 items</u> in each time of day.</div>
+      <div class="nnt"><b>Next</b> Follow the rules below.</div>
+      <div class="nnt"><b>Then</b> Press “Check Plan” and print.</div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card" style="padding:12px">
+        <div class="pill">💙 Likes</div>
+        <div class="items" id="likes3"></div>
+        <div class="pill" style="margin-top:8px">✅ Needs</div>
+        <div class="items" id="needs3"></div>
+        <div class="small" style="margin-top:8px">Tip: Tap “Tap-to-Place” if drag is tricky.</div>
+      </div>
+      <div class="grid grid-3">
+        <div class="drop" data-accept="plan-morning" aria-label="Plan morning">
+          <h3>🌅 Morning</h3>
+          <div class="zone plan" id="plan-morning"></div>
+          <div class="hint">2 items, at least 1 Need. No Screen Time here.</div>
+        </div>
+        <div class="drop" data-accept="plan-afternoon" aria-label="Plan afternoon">
+          <h3>🌤️ Afternoon</h3>
+          <div class="zone plan" id="plan-afternoon"></div>
+          <div class="hint">2 items, at least 1 Need.</div>
+        </div>
+        <div class="drop" data-accept="plan-evening" aria-label="Plan evening">
+          <h3>🌙 Evening</h3>
+          <div class="zone plan" id="plan-evening"></div>
+          <div class="hint">2 items, at least 1 Need.</div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div class="pill">📏 Rules</div>
+          <ul>
+            <li>Each time of day: <b>2 items</b> and <b>≥1 Need</b>.</li>
+            <li>Include <b>Movement</b> (walk/exercise) somewhere.</li>
+            <li><b>Screen time only in Evening</b>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="progress" style="flex:1; min-width:220px"><div class="bar" id="bar3"></div></div>
+      <div>
+        <button class="ghost" id="reset3">Reset Stage</button>
+        <button class="good" id="check3">Check Plan</button>
+        <button class="ghost" id="print">Print My Plan</button>
+      </div>
+    </div>
+    <div class="status bad" id="status3" role="status"></div>
+  </section>
+</main>
+
+<script>
+const isTouch = matchMedia('(pointer: coarse)').matches;
+let tapMode = null; let selectedItem = null;
+function setTapMode(mode){ tapMode = mode; document.getElementById('modeLabel').textContent = tapMode===null?'Auto':(tapMode?'On':'Off'); }
+setTapMode(null);
+document.getElementById('toggleSelect').addEventListener('click', ()=>{
+  if(tapMode===null) setTapMode(true); else if(tapMode===true) setTapMode(false); else setTapMode(null);
+  document.querySelectorAll('.item').forEach(el => el.draggable = !(tapMode===null?isTouch:tapMode));
+});
+function shouldUseTap(){ return tapMode===null ? isTouch : tapMode; }
+
+function makeItem({id, label, emoji, group, answer, tags}){
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.setAttribute('role','button'); el.setAttribute('tabindex','0');
+  el.draggable = !shouldUseTap();
+  el.dataset.id = id; el.dataset.group = group || ''; el.dataset.answer = answer || ''; el.dataset.tags = (tags||[]).join(',');
+  el.innerHTML = `<span aria-hidden="true" style="font-size:22px">${emoji||'⬜'}</span><span>${label}</span>`;
+  el.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', JSON.stringify({id, group, answer})); setTimeout(()=> el.style.opacity = '0.4', 0); });
+  el.addEventListener('dragend', e => el.style.opacity = '1');
+  el.addEventListener('click', () => {
+    if(!shouldUseTap()) return;
+    if(selectedItem === el){ el.style.outline = ''; selectedItem = null; return; }
+    document.querySelectorAll('.item').forEach(i=> i.style.outline=''); el.style.outline = '3px solid #fde68a'; selectedItem = el;
+  });
+  el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') el.click(); });
+  return el;
+}
+function makeDrop(el){
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('highlight'); });
+  el.addEventListener('dragleave', e => el.classList.remove('highlight'));
+  el.addEventListener('drop', e => {
+    e.preventDefault(); el.classList.remove('highlight');
+    try{ const data = JSON.parse(e.dataTransfer.getData('text/plain')); const item = document.querySelector(`.item[data-id="${data.id}"]`); place(el, item);}catch(err){}
+  });
+  el.addEventListener('click', ()=>{
+    if(!shouldUseTap()) return;
+    if(selectedItem){ place(el, selectedItem); selectedItem.style.outline=''; selectedItem=null; }
+  });
+}
+function place(dropEl, item){
+  if(dropEl.classList.contains('slot')){
+    if(dropEl.querySelector('.item')) { bump('Slot already filled.'); return; }
+    dropEl.appendChild(item);
+  }else{
+    const zone = dropEl.querySelector('.zone, .sequence, .items') || dropEl;
+    zone.appendChild(item);
+  }
+  updateProgress();
+}
+function bump(msg){
+  const el = document.createElement('div'); el.textContent = msg; el.className = 'status show bad';
+  el.style.position='fixed'; el.style.left='50%'; el.style.top='12px'; el.style.transform='translateX(-50%)'; el.style.zIndex='9999';
+  document.body.appendChild(el); setTimeout(()=> el.remove(), 1600);
+}
+
+const seqAnswer = ['wake','wash','teeth','breakfast','pack','bus'];
+const seqItems = [
+  {id:'wake', label:'Wake up', emoji:'⏰'},
+  {id:'wash', label:'Wash face / hands', emoji:'🧼'},
+  {id:'teeth', label:'Brush teeth', emoji:'🪥'},
+  {id:'breakfast', label:'Breakfast', emoji:'🍳'},
+  {id:'pack', label:'Pack bag', emoji:'🎒'},
+  {id:'bus', label:'Catch bus / Travel', emoji:'🚌'},
+  {id:'tv', label:'Watch TV', emoji:'📺'},
+  {id:'game', label:'Play games', emoji:'🎮'},
+  {id:'nap', label:'Have a nap', emoji:'😴'},
+];
+const timePairs = [
+  {id:'t-breakfast', label:'Breakfast', emoji:'🍳', answer:'07:30'},
+  {id:'t-teeth', label:'Brush teeth (morning)', emoji:'🪥', answer:'08:30'},
+  {id:'t-lunch', label:'Lunch', emoji:'🥪', answer:'12:30'},
+  {id:'t-learn', label:'Homework / Learning', emoji:'🧠', answer:'16:00'},
+  {id:'t-dinner', label:'Dinner', emoji:'🍽️', answer:'18:30'},
+  {id:'t-shower', label:'Shower', emoji:'🚿', answer:'21:00'},
+];
+const likes = [
+  {id:'ipad', label:'iPad time (Screen time)', emoji:'📱', group:'like', tags:['screen']},
+  {id:'music', label:'Listen to music', emoji:'🎵', group:'like'},
+  {id:'friends', label:'See friends', emoji:'👫', group:'like'},
+  {id:'tv2', label:'Watch TV', emoji:'📺', group:'like', tags:['screen']},
+];
+const needs = [
+  {id:'brush', label:'Brush teeth', emoji:'🪥', group:'need'},
+  {id:'tidy', label:'Tidy room', emoji:'🧹', group:'need'},
+  {id:'learn2', label:'Homework / Learning', emoji:'🧠', group:'need', tags:['learning']},
+  {id:'help', label:'Help at home', emoji:'🧺', group:'need'},
+  {id:'move', label:'Walk / Exercise', emoji:'🏃', group:'need', tags:['movement']},
+  {id:'shower2', label:'Shower', emoji:'🚿', group:'need', tags:['evening']},
+];
+function buildStage1(){ const bank=document.getElementById('bank1'); bank.innerHTML=''; seqItems.forEach(it => bank.appendChild(makeItem(it))); document.querySelectorAll('#sequence1 .slot').forEach(makeDrop); makeDrop(document.getElementById('sequence1').parentElement); makeDrop(bank.parentElement);}
+function buildStage2(){ const bank=document.getElementById('bank2'); bank.innerHTML=''; timePairs.forEach(it => bank.appendChild(makeItem(it))); document.querySelectorAll('#times .slot').forEach(makeDrop); makeDrop(document.getElementById('times').parentElement); makeDrop(bank.parentElement);}
+function buildStage3(){ const le=document.getElementById('likes3'); le.innerHTML=''; const ne=document.getElementById('needs3'); ne.innerHTML=''; likes.forEach(it => le.appendChild(makeItem(it))); needs.forEach(it => ne.appendChild(makeItem(it))); ['plan-morning','plan-afternoon','plan-evening'].forEach(id => makeDrop(document.getElementById(id).parentElement)); [le.parentElement, ne.parentElement].forEach(makeDrop);}
+buildStage1(); buildStage2(); buildStage3();
+document.querySelectorAll('[data-goto]').forEach(btn => btn.addEventListener('click', ()=>{ const id=btn.getAttribute('data-goto'); document.querySelectorAll('.stage').forEach(s=> s.classList.remove('active')); document.getElementById(id).classList.add('active'); updateProgress(); window.scrollTo({top:0, behavior:'smooth'});}));
+function resetStage(stage){
+  if(stage===1){ const bank=document.getElementById('bank1'); document.querySelectorAll('#sequence1 .item').forEach(it => bank.appendChild(it)); }
+  if(stage===2){ const bank=document.getElementById('bank2'); document.querySelectorAll('#times .item').forEach(it => bank.appendChild(it)); }
+  if(stage===3){ const le=document.getElementById('likes3'); const ne=document.getElementById('needs3'); document.querySelectorAll('#plan-morning .item, #plan-afternoon .item, #plan-evening .item').forEach(it => { (it.dataset.group==='like' ? le : ne).appendChild(it); }); }
+  document.querySelectorAll('.status').forEach(s=>{s.classList.remove('show'); s.textContent='';}); updateProgress();
+}
+document.getElementById('reset1').addEventListener('click', ()=> resetStage(1));
+document.getElementById('reset2').addEventListener('click', ()=> resetStage(2));
+document.getElementById('reset3').addEventListener('click', ()=> resetStage(3));
+function checkStage1(){
+  const slots = Array.from(document.querySelectorAll('#sequence1 .slot')); const placed = slots.map(s => s.querySelector('.item')?.dataset.id || null); const filtered = placed.filter(Boolean); const s = document.getElementById('status1');
+  if(filtered.length !== 6){ s.className='status show bad'; s.textContent=`You placed ${filtered.length}/6. Fill all 6 steps.`; updateProgress(); return; }
+  let correct = 0; const answer=['wake','wash','teeth','breakfast','pack','bus']; for(let i=0;i<6;i++){ if(placed[i]===answer[i]) correct++; }
+  if(correct===6){ s.className='status show good'; s.textContent='Perfect order! 🎉'; } else { s.className='status show bad'; s.textContent=`${correct}/6 in the right place. Try swapping any out-of-order steps.`; }
+  updateProgress();
+}
+document.getElementById('check1').addEventListener('click', checkStage1);
+function checkStage2(){
+  const s = document.getElementById('status2'); const total = 6; let correct = 0;
+  document.querySelectorAll('#times .slot').forEach(slot => { const item = slot.querySelector('.item'); if(!item) return; if(item.dataset.answer === slot.dataset.id) correct++; });
+  if(correct===total){ s.className='status show good'; s.textContent='All matched! ⏱️'; } else { s.className='status show bad'; s.textContent=`You matched ${correct}/${total}. Recheck any that don’t fit the time.`; }
+  updateProgress();
+}
+document.getElementById('check2').addEventListener('click', checkStage2);
+function checkStage3(){
+  const s = document.getElementById('status3'); const zones = ['plan-morning','plan-afternoon','plan-evening'].map(id => document.getElementById(id));
+  for(const z of zones){ const items = Array.from(z.querySelectorAll('.item')); if(items.length !== 2){ s.className='status show bad'; s.textContent='Each time of day needs exactly 2 items.'; return; } const needsCount = items.filter(i=> i.dataset.group==='need').length; if(needsCount < 1){ s.className='status show bad'; s.textContent='Each time of day needs at least 1 Need.'; return; } }
+  const anyMove = document.querySelectorAll('#plan-morning .item[data-tags*="movement"], #plan-afternoon .item[data-tags*="movement"], #plan-evening .item[data-tags*="movement"]').length > 0;
+  if(!anyMove){ s.className='status show bad'; s.textContent='Include Movement (walk/exercise) somewhere.'; return; }
+  const badScreen = document.querySelectorAll('#plan-morning .item[data-tags*="screen"], #plan-afternoon .item[data-tags*="screen"]').length > 0;
+  if(badScreen){ s.className='status show bad'; s.textContent='Screen time is evening-only. Move it to 🌙 Evening.'; return; }
+  s.className='status show good'; s.textContent='Nice balanced day! ✅ Print or screenshot for your folder.'; updateProgress();
+}
+document.getElementById('check3').addEventListener('click', checkStage3);
+function updateProgress(){
+  const filled1 = Array.from(document.querySelectorAll('#sequence1 .slot')).filter(s => s.querySelector('.item')).length;
+  document.getElementById('bar1').style.width = ((filled1/6)*100)+'%';
+  const placed2 = Array.from(document.querySelectorAll('#times .slot .item')).length;
+  document.getElementById('bar2').style.width = ((placed2/6)*100)+'%';
+  const placed3 = ['plan-morning','plan-afternoon','plan-evening'].reduce((n,id)=> n + document.querySelectorAll('#'+id+' .item').length, 0);
+  document.getElementById('bar3').style.width = ((placed3/6)*100)+'%';
+}
+document.querySelectorAll('.drop, .slot').forEach(makeDrop);
+document.getElementById('print').addEventListener('click', ()=> window.print());
+</script>
+</body>
+</html>
